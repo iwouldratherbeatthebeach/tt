@@ -45,7 +45,6 @@ export async function onRequestPost(context) {
 
     const body = await context.request.json();
 
-    // 1) Save the attempt row first
     const insertResult = await context.env.DB.prepare(`
       INSERT INTO attempts (
         candidate_name,
@@ -82,7 +81,6 @@ export async function onRequestPost(context) {
     let pdfSaved = false;
     let pdfError = null;
 
-    // 2) Only attempt PDF generation if both bindings exist
     if (context.env.BROWSER && context.env.REPORTS) {
       try {
         const html = buildReportHtml(body);
