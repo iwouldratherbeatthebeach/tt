@@ -1,16 +1,130 @@
-
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<title>TAM Assessment</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Architect Readiness Assessment</title>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-<h1>TAM Readiness Assessment</h1>
-<button onclick="startQuiz()">Start Assessment</button>
-<div id="quiz"></div>
-<div id="results"></div>
-<script src="app.js"></script>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">AR</div>
+        <div>
+          <h1>Architect Readiness</h1>
+          <p>Assessment console</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <label class="field">
+          <span>Candidate name</span>
+          <input id="candidateName" type="text" placeholder="Candidate name" />
+        </label>
+        <label class="field">
+          <span>Candidate email</span>
+          <input id="candidateEmail" type="email" placeholder="name@example.com" />
+        </label>
+      </div>
+
+      <div class="panel">
+        <div class="progress-head">
+          <span id="progressText">Not started</span>
+          <span id="answeredText">0 / 100</span>
+        </div>
+        <div class="progress-track">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="side-actions">
+          <button id="startBtn" class="btn btn-primary">Start assessment</button>
+          <button id="prevBtn" class="btn btn-secondary">Previous</button>
+          <button id="nextBtn" class="btn btn-secondary">Next</button>
+          <button id="submitBtn" class="btn btn-success">Submit</button>
+          <button id="resetBtn" class="btn btn-ghost">Reset</button>
+        </div>
+      </div>
+
+      <div class="panel small">
+        <h3>Logging</h3>
+        <p>Results save locally automatically. If <code>/api/attempts</code> exists, the app will also post the final result there.</p>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section id="welcomeCard" class="card hero">
+        <div>
+          <span class="eyebrow">TSE → TAM program</span>
+          <h2>Architect Readiness Assessment</h2>
+          <p class="muted">Cleaner UI, domain scoring, printable report, and result logging support.</p>
+        </div>
+      </section>
+
+      <section id="quizCard" class="card hidden">
+        <div class="question-meta">
+          <span id="domainPill" class="pill">Domain</span>
+          <span id="subcategoryPill" class="pill">Subcategory</span>
+          <span id="difficultyPill" class="pill">Difficulty</span>
+          <span id="weightPill" class="pill">Weight</span>
+        </div>
+        <h2 id="questionText" class="question-text"></h2>
+        <div id="choicesWrap" class="choices"></div>
+      </section>
+
+      <section id="resultsCard" class="card hidden">
+        <div class="results-top">
+          <div>
+            <span class="eyebrow">Assessment results</span>
+            <h2 id="readinessBand">Developing</h2>
+            <p id="resultSummary" class="muted"></p>
+          </div>
+          <div class="results-actions">
+            <button id="downloadHtmlBtn" class="btn btn-primary">Download report</button>
+            <button id="printBtn" class="btn btn-secondary">Print / Save PDF</button>
+          </div>
+        </div>
+
+        <div class="score-grid">
+          <div class="metric-card">
+            <span>Weighted score</span>
+            <strong id="overallWeighted">0%</strong>
+          </div>
+          <div class="metric-card">
+            <span>Raw score</span>
+            <strong id="overallRaw">0/100</strong>
+          </div>
+          <div class="metric-card">
+            <span>Questions answered</span>
+            <strong id="overallAnswered">0</strong>
+          </div>
+          <div class="metric-card">
+            <span>Logged status</span>
+            <strong id="loggedStatus">Local only</strong>
+          </div>
+        </div>
+
+        <div class="results-layout">
+          <div class="subcard">
+            <h3>Scores by domain</h3>
+            <div id="domainScores" class="bars"></div>
+          </div>
+          <div class="subcard">
+            <h3>Priority growth areas</h3>
+            <div id="growthAreas"></div>
+          </div>
+        </div>
+
+        <div class="subcard">
+          <h3>Detailed domain table</h3>
+          <div id="domainTable"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./app.js"></script>
 </body>
 </html>
