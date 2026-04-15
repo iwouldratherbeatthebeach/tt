@@ -5,7 +5,7 @@ const state = {
   result: null,
   saveStatus: "Not saved",
 };
-n
+
 const els = {
   candidateName: document.getElementById("candidateName"),
   candidateEmail: document.getElementById("candidateEmail"),
