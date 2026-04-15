@@ -115,12 +115,18 @@ function renderQuestion() {
       <div class="choice-copy">${escapeHtml(q[`option_${letter.toLowerCase()}`])}</div>
     `;
 
-    btn.addEventListener("click", () => {
-      state.answers[q.question_id] = letter;
-      renderQuestion();
-      updateProgress();
-      saveProgress();
-    });
+btn.addEventListener("click", () => {
+  state.answers[q.question_id] = letter;
+  saveProgress();
+  updateProgress();
+
+  if (state.currentIndex < state.questions.length - 1) {
+    state.currentIndex += 1;
+    renderQuestion();
+  } else {
+    computeResult();
+  }
+});
 
     els.choicesWrap.appendChild(btn);
   });
