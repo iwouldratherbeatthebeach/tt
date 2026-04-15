@@ -1,0 +1,11 @@
+{
+  "name": "architect-assessment",
+  "compatibility_date": "2026-04-15",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "architect_assessment",
+      "database_id": "REPLACE_WITH_YOUR_DATABASE_ID"
+    }
+  ]
+}
