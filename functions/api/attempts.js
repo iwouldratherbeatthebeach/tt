@@ -1,9 +1,52 @@
+export async function onRequestGet(context) {
+  try {
+    if (!context.env.DB) {
+      return Response.json(
+        { ok: false, error: "DB binding is missing" },
+        { status: 500 }
+      );
+    }
+
+    const { results } = await context.env.DB.prepare(`
+      SELECT
+        id,
+        candidate_name,
+        candidate_email,
+        readiness_band,
+        overall_percent,
+        raw_correct,
+        total_questions,
+        answered_count,
+        completed_at,
+        pdf_key,
+        created_at
+      FROM attempts
+      ORDER BY id DESC
+      LIMIT 100
+    `).all();
+
+    return Response.json({ ok: true, results });
+  } catch (err) {
+    return Response.json(
+      { ok: false, error: String(err) },
+      { status: 500 }
+    );
+  }
+}
+
 export async function onRequestPost(context) {
   try {
+    if (!context.env.DB) {
+      return Response.json(
+        { ok: false, error: "DB binding is missing" },
+        { status: 500 }
+      );
+    }
+
     const body = await context.request.json();
 
-    // 1) Save attempt first
-    const insert = await context.env.DB.prepare(`
+    // 1) Save the attempt row first
+    const insertResult = await context.env.DB.prepare(`
       INSERT INTO attempts (
         candidate_name,
         candidate_email,
@@ -16,7 +59,6 @@ export async function onRequestPost(context) {
         weak_areas_json,
         completed_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      RETURNING id
     `).bind(
       body.candidateName || null,
       body.candidateEmail || null,
@@ -28,60 +70,71 @@ export async function onRequestPost(context) {
       JSON.stringify(body.domainScores || []),
       JSON.stringify(body.weakAreas || []),
       body.completedAt || null
-    ).first();
+    ).run();
 
-    const attemptId = insert?.id;
+    const attemptId = insertResult?.meta?.last_row_id;
+
     if (!attemptId) {
       throw new Error("Failed to create attempt row");
     }
 
-    // 2) Build report HTML
-    const html = buildReportHtml(body);
+    let pdfKey = null;
+    let pdfSaved = false;
+    let pdfError = null;
 
-    // 3) Generate PDF using Browser Rendering
-    // This assumes you configured a Browser Rendering binding named BROWSER
-    const browser = await context.env.BROWSER.launch();
-    const page = await browser.newPage();
+    // 2) Only attempt PDF generation if both bindings exist
+    if (context.env.BROWSER && context.env.REPORTS) {
+      try {
+        const html = buildReportHtml(body);
 
-    await page.setContent(html, { waitUntil: "networkidle0" });
+        const browser = await context.env.BROWSER.launch();
+        const page = await browser.newPage();
 
-    const pdfBytes = await page.pdf({
-      format: "Letter",
-      printBackground: true,
-      margin: {
-        top: "0.5in",
-        right: "0.5in",
-        bottom: "0.5in",
-        left: "0.5in"
+        await page.setContent(html, { waitUntil: "networkidle0" });
+
+        const pdfBytes = await page.pdf({
+          format: "Letter",
+          printBackground: true,
+          margin: {
+            top: "0.5in",
+            right: "0.5in",
+            bottom: "0.5in",
+            left: "0.5in"
+          }
+        });
+
+        await browser.close();
+
+        const safeName = (body.candidateName || "candidate")
+          .replace(/[^a-z0-9_-]+/gi, "_")
+          .toLowerCase();
+
+        pdfKey = `reports/${attemptId}_${safeName}.pdf`;
+
+        await context.env.REPORTS.put(pdfKey, pdfBytes, {
+          httpMetadata: {
+            contentType: "application/pdf"
+          }
+        });
+
+        await context.env.DB.prepare(`
+          UPDATE attempts
+          SET pdf_key = ?
+          WHERE id = ?
+        `).bind(pdfKey, attemptId).run();
+
+        pdfSaved = true;
+      } catch (err) {
+        pdfError = String(err);
       }
-    });
-
-    await browser.close();
-
-    // 4) Save PDF to R2
-    const safeName = (body.candidateName || "candidate")
-      .replace(/[^a-z0-9_-]+/gi, "_")
-      .toLowerCase();
-
-    const pdfKey = `reports/${attemptId}_${safeName}.pdf`;
-
-    await context.env.REPORTS.put(pdfKey, pdfBytes, {
-      httpMetadata: {
-        contentType: "application/pdf"
-      }
-    });
-
-    // 5) Save the PDF key back to D1
-    await context.env.DB.prepare(`
-      UPDATE attempts
-      SET pdf_key = ?
-      WHERE id = ?
-    `).bind(pdfKey, attemptId).run();
+    }
 
     return Response.json({
       ok: true,
       attemptId,
-      pdfKey
+      pdfSaved,
+      pdfKey,
+      pdfError
     });
   } catch (err) {
     return Response.json(
@@ -96,16 +149,16 @@ function buildReportHtml(result) {
     .map(d => `
       <tr>
         <td>${escapeHtml(prettyDomain(d.domain))}</td>
-        <td>${d.weightedPercent}%</td>
-        <td>${d.correct}/${d.total}</td>
-        <td>${escapeHtml(d.status)}</td>
+        <td>${d.weightedPercent ?? 0}%</td>
+        <td>${d.correct ?? 0}/${d.total ?? 0}</td>
+        <td>${escapeHtml(d.status || "-")}</td>
       </tr>
     `)
     .join("");
 
   const weakAreas = (result.weakAreas || []).length
     ? `<ul>${result.weakAreas.map(x => `
-        <li><strong>${escapeHtml(prettyDomain(x.domain))}</strong> — ${escapeHtml(String(x.subcategory).replaceAll("_", " "))}: missed ${x.misses}/${x.total}</li>
+        <li><strong>${escapeHtml(prettyDomain(x.domain))}</strong> — ${escapeHtml(String(x.subcategory || "").replaceAll("_", " "))}: missed ${x.misses ?? 0}/${x.total ?? 0}</li>
       `).join("")}</ul>`
     : "<p>No major gaps detected.</p>";
 
@@ -131,6 +184,7 @@ function buildReportHtml(result) {
         <p><strong>Readiness band:</strong> ${escapeHtml(result.readinessBand || "-")}</p>
         <p><strong>Weighted score:</strong> ${result.overallPercent || 0}%</p>
         <p><strong>Raw score:</strong> ${result.rawCorrect || 0}/${result.total || 0}</p>
+        <p><strong>Questions answered:</strong> ${result.answered || 0}</p>
       </div>
 
       <div class="card">
