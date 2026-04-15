@@ -1,11 +1,16 @@
 {
   "name": "architect-assessment",
   "compatibility_date": "2026-04-15",
+
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "architect_assessment",
-      "database_id": "REPLACE_WITH_YOUR_DATABASE_ID"
+      "database_name": "tt",
+      "database_id": "2e43a5fc-0a78-4c93-936e-4ef524316675"
     }
-  ]
+  ],
+
+  "browser": {
+    "binding": "BROWSER"
+  }
 }
