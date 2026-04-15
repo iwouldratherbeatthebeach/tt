@@ -30,10 +30,7 @@ export async function onRequestPost(context) {
 
     return Response.json({ ok: true });
   } catch (err) {
-    return Response.json(
-      { ok: false, error: String(err) },
-      { status: 500 }
-    );
+    return Response.json({ ok: false, error: String(err) }, { status: 500 });
   }
 }
 
@@ -58,9 +55,6 @@ export async function onRequestGet(context) {
 
     return Response.json({ ok: true, results });
   } catch (err) {
-    return Response.json(
-      { ok: false, error: String(err) },
-      { status: 500 }
-    );
+    return Response.json({ ok: false, error: String(err) }, { status: 500 });
   }
 }
