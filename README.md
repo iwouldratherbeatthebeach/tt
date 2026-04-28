@@ -341,4 +341,4 @@ This can be ignored if you are configuring bindings in the Pages dashboard.
 
 ## License
 
-Internal technical assessment tooling for Splunk architect readiness evaluation.
+Internal technical assessment tooling for Splunk TAM readiness evaluation.
